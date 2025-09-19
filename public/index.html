@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Hammerhead Search</title>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      /* Base reset */
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: #0d1117; /* Dark background */
+        color: #c9d1d9;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+
+      header {
+        padding: 40px 20px 20px 20px;
+        text-align: center;
+      }
+
+      h1 {
+        color: #00d1b2; /* Hammerhead accent color */
+        font-size: 48px;
+        margin-bottom: 20px;
+        font-weight: 700;
+        letter-spacing: 1px;
+      }
+
+      .search-container {
+        display: flex;
+        justify-content: center;
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      input[type="text"] {
+        flex: 1;
+        padding: 14px 20px;
+        font-size: 16px;
+        border-radius: 30px 0 0 30px;
+        border: none;
+        outline: none;
+        background-color: #161b22;
+        color: #c9d1d9;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        transition: all 0.3s ease;
+      }
+
+      input[type="text"]::placeholder {
+        color: #8b949e;
+      }
+
+      input[type="text"]:focus {
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+      }
+
+      button {
+        padding: 14px 24px;
+        border: none;
+        background: #00d1b2;
+        color: #0d1117;
+        font-size: 16px;
+        border-radius: 0 30px 30px 0;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s ease;
+      }
+
+      button:hover {
+        background: #00b89f;
+      }
+
+      main {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        padding: 30px 20px;
+      }
+
+      .results-container {
+        max-width: 750px;
+        width: 100%;
+      }
+
+      .card {
+        background: linear-gradient(135deg, #161b22, #0d1117);
+        border: 1px solid #21262d;
+        padding: 18px;
+        border-radius: 12px;
+        margin-bottom: 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        transition: transform 0.2s;
+        display: none;
+      }
+
+      .card:hover {
+        transform: translateY(-2px);
+      }
+
+      .card img {
+        max-width: 150px;
+        margin-top: 8px;
+        border-radius: 8px;
+      }
+
+      .result {
+        padding: 16px 0;
+        border-bottom: 1px solid #21262d;
+        transition: background 0.2s;
+      }
+
+      .result a {
+        font-size: 18px;
+        color: #58a6ff; /* Hammerhead link color */
+        text-decoration: none;
+      }
+
+      .result a:hover {
+        text-decoration: underline;
+      }
+
+      .snippet {
+        font-size: 14px;
+        color: #8b949e;
+        margin-top: 4px;
+      }
+
+      .pagination {
+        display: flex;
+        justify-content: center;
+        margin: 20px 0;
+      }
+
+      .page-btn {
+        margin: 0 5px;
+        padding: 8px 14px;
+        border-radius: 8px;
+        background: #21262d;
+        color: #c9d1d9;
+        border: none;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .page-btn:hover {
+        background: #30363d;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Hammerhead</h1>
+      <div class="search-container">
+        <input type="text" id="query" placeholder="Search..." />
+        <button id="searchBtn">Search</button>
+      </div>
+    </header>
+
+    <main>
+      <div class="results-container">
+        <div id="instantAnswer" class="card"></div>
+        <div id="wikiSummary" class="card"></div>
+        <div id="results"></div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </main>
+
+    <script>
+      const searchBtn = document.getElementById("searchBtn");
+      const queryInput = document.getElementById("query");
+      const resultsDiv = document.getElementById("results");
+      const instantDiv = document.getElementById("instantAnswer");
+      const wikiDiv = document.getElementById("wikiSummary");
+      const paginationDiv = document.getElementById("pagination");
+
+      let currentPage = 1;
+
+      async function doSearch(page = 1) {
+        const query = queryInput.value.trim();
+        if (!query) return;
+
+        resultsDiv.innerHTML = "Loading...";
+        instantDiv.innerHTML = "";
+        wikiDiv.innerHTML = "";
+        paginationDiv.innerHTML = "";
+        wikiDiv.style.display = "none";
+        instantDiv.style.display = "none";
+
+        try {
+          const res = await fetch(
+            `/search/${encodeURIComponent(query)}?page=${page}`
+          );
+          if (!res.ok) throw new Error("Search failed");
+
+          const data = await res.json();
+          currentPage = page;
+
+          // AI Overview
+          if (data.instant && data.instant.answer) {
+            instantDiv.innerHTML = `<strong>AI Overview:</strong> ${data.instant.answer}`;
+            instantDiv.style.display = "block";
+          }
+
+          // Wikipedia summary
+          if (data.wiki) {
+            wikiDiv.innerHTML = `
+          <strong>Wikipedia:</strong> <a href="${
+            data.wiki.url
+          }" target="_blank">${data.wiki.title}</a>
+          <p>${data.wiki.extract}</p>
+          ${
+            data.wiki.thumbnail
+              ? `<img src="${data.wiki.thumbnail}" alt="Thumbnail"/>`
+              : ""
+          }
+        `;
+            wikiDiv.style.display = "block";
+          }
+
+          // Text search results
+          if (data.text && data.text.length > 0) {
+            resultsDiv.innerHTML = data.text
+              .map(
+                (item) => `
+          <div class="result">
+            <a href="${item.link}" target="_blank">${item.title}</a>
+            <p class="snippet">${item.snippet}</p>
+          </div>
+        `
+              )
+              .join("");
+          } else {
+            resultsDiv.innerHTML = "<p>No results found.</p>";
+          }
+
+          // Pagination
+          // Pagination
+          paginationDiv.innerHTML = `
+  ${
+    page > 1
+      ? `<button class="page-btn" onclick="doSearch(${
+          page - 1
+        })">Previous</button>`
+      : ""
+  }
+  ${
+    data.hasNext
+      ? `<button class="page-btn" onclick="doSearch(${page + 1})">Next</button>`
+      : ""
+  }
+`;
+        } catch (err) {
+          resultsDiv.innerHTML = `<p>Error: ${err.message}</p>`;
+        }
+      }
+
+      searchBtn.addEventListener("click", () => doSearch(1));
+      queryInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") doSearch(1);
+      });
+    </script>
+  </body>
+</html>
