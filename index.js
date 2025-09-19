@@ -34,14 +34,16 @@ app.get("/search/:query", async (req, res) => {
   const perPage = parseInt(req.query.perPage) || 10;
 
   try {
-    // Fetch enough results for current page
+    // Calculate how many results to fetch to cover the current page
+    const maxResults = page * perPage;
+
     const {
       text: allText,
       instant: instantResults,
       wiki: wikiResults,
-    } = await se.search(query, page * perPage);
+    } = await se.search(query, maxResults);
 
-    // Slice for current page
+    // Slice results for the current page
     const paginatedText = allText.slice((page - 1) * perPage, page * perPage);
 
     res.json({
